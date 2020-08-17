@@ -1,19 +1,16 @@
 import org.openqa.selenium.*;
-import org.openqa.selenium.Dimension;
-import org.openqa.selenium.Point;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.firefox.internal.ProfilesIni;
 
-import java.awt.*;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 
 
 public class WebBrowserBackup {
-    public static WebDriver driver;
+    private static WebDriver driver;
 
     private static final String CONST_backupTypeGoogleKeep = "googleKeep";
     private static final String CONST_backupTypeZenMoney = "zenMoney";
@@ -31,7 +28,7 @@ public class WebBrowserBackup {
     }
 
     // всякие необходимые инициализационные штуки для драйвера
-    private static void initResources(String webBrowserProfile) {
+    private static void initResources(String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
         System.setProperty("webdriver.gecko.driver", "dependencies\\geckodriver.exe"); // укаываем местоположение драйверов для firefox
         // System.setProperty("webdriver.chrome.driver", "C:\googleKeepBackup\dependencies\\chromedriver.exe"); // chrome не исполльзуется, потому что с ним были ошибки. Но пусть будет на всякий случай для истории
 
@@ -40,18 +37,11 @@ public class WebBrowserBackup {
         // Профиль настраивается вручную через firefox.
         ProfilesIni profile = new ProfilesIni();
         FirefoxProfile firefoxProfile = profile.getProfile( webBrowserProfile );
-        FirefoxOptions options = new FirefoxOptions().setProfile(firefoxProfile);
+        FirefoxOptions options = new FirefoxOptions();
+        options.setProfile(firefoxProfile);
+        options.setHeadless(useWebBrowserWithoutGuiInHiddenHeadlessMode);
         System.out.println("starting selenium web driver");
         driver = new FirefoxDriver(options);
-
-        GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-        int width = gd.getDisplayMode().getWidth();
-        int height = gd.getDisplayMode().getHeight();
-
-        // делаем так, чтобы окно браузера оставалось в самом углу
-        driver.manage().window().setPosition(new Point(width-50,height-70)); // x y
-        driver.manage().window().setSize(new Dimension(0,0));
-
     }
 
     // типа деструктора ресурсов. Закрываем все соединения, закрываем браузер и т.д.
@@ -145,7 +135,6 @@ public class WebBrowserBackup {
 
     }
 
-
     private static void redirectAllOutputToFile(String outputFile) {
 
         PrintStream out = null;
@@ -159,7 +148,7 @@ public class WebBrowserBackup {
 
     }
 
-    private static void runBackup(String backupType, String webBrowserProfile) {
+    private static void runBackup(String backupType, String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
 
         Boolean inputBackupTypeValid = false;
         for (String availableBackupItem: CONST_availableBackupTypes) {
@@ -170,7 +159,7 @@ public class WebBrowserBackup {
         }
 
         if(inputBackupTypeValid) {
-            runBackup_int(backupType, webBrowserProfile);
+            runBackup_int(backupType, webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
         }
         else {
             System.out.println("'" + backupType + "' is not available backup type. List of available backup types: " + getPrintableAvailableBackupTypes() );
@@ -178,14 +167,19 @@ public class WebBrowserBackup {
 
     }
 
-    private static void runBackup_int(String backupType, String webBrowserProfile) {
+    // todo: мне кажется, что лучше не передавать параметры в процедурах, а сделать эти параметры полями класса (по идее, статическими? ). Даже, возможно, стоит сделать какой-нибудь класс BackupParameters
+    private static void runBackup_int(String backupType, String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
 
         long unixTime = System.currentTimeMillis() / 1000L;
         String outputFile = "log\\" + backupType+ "Backup" + webBrowserProfile +  unixTime + ".log"; // формируем лог файлы, ничего не перезаписывая, чтобы можно было отслелить происходящее с течением времени
         redirectAllOutputToFile(outputFile);
 
-        initResources(webBrowserProfile);
+        initResources(webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
 
+        /*
+         todo: этот код - потенциальный кандидат на разделение классов. Т.е. на каждый тип бэкапа можно иметь свой подкласс. Можно создать суперкласс, который содержит метод runBackup
+        * тогда этот код оперировал бы терминами суперкласса. Т.е. безусловно вызывал бы метод runBackup. А конкрктный подкласс, который бы присваивался переменной с типом суперкласса, определялся бы в фабричном методе.
+        */
         switch (backupType) {
             case CONST_backupTypeGoogleKeep:
                 runGoogleKeepBackup();
@@ -227,9 +221,14 @@ public class WebBrowserBackup {
 
     public static void main( String[] args )
     {
+        /*
+         TODO: refactor this. Параметры передаются неудобно. Нужно использовать какой-нибудь стандартный фреймворк передачи параметров из разряда "key-value", чтобы можно было параметры передавать в произвольном порядке
+        * например, так: javaw -jar WebBrowserBackupProgramJarFile -backupType=zenMoney ..."
+        * иначе клиенту нужно помнить позиционно все параметры, что не очень хорошо. К тому же клиенту сейчас нужно заполнять все параметры. А если бы была структура "key-value", то некоторые параметры можно было бы сделать опциоальными.
+        */
         if( args.length == 0 || // если на вход получили пустую строку параметров
             args[0].equals("-help") || // или явно пользователь просит помощь
-            args.length != 2 // или количество входных параметров не равно допустимому. На текущий момент допустимо только 2 параметра. Не больше, не больше.
+            args.length != 3 // или количество входных параметров не равно допустимому. На текущий момент допустимо только 2 параметра. Не больше, не больше.
            ) {
             printHelp();
         }
@@ -238,8 +237,9 @@ public class WebBrowserBackup {
             // CONST_backupTypeGoogleKeep
             String backupType = args[0];
             String webBrowserProfile = args[1];
+            Boolean doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode = ( args[2].equals( "useWebBrowserWithoutGuiInHiddenHeadlessMode=false") );
 
-            runBackup(backupType, webBrowserProfile);
+            runBackup( backupType, webBrowserProfile, !doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode );
         }
 
     }
