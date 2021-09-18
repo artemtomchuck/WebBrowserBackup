@@ -8,7 +8,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 
-
 public class WebBrowserBackup {
     private static WebDriver driver;
 
@@ -37,18 +36,23 @@ public class WebBrowserBackup {
         // Профиль настраивается вручную через firefox.
         ProfilesIni profile = new ProfilesIni();
         FirefoxProfile firefoxProfile = profile.getProfile( webBrowserProfile );
+
         FirefoxOptions options = new FirefoxOptions();
+
         options.setProfile(firefoxProfile);
         options.setHeadless(useWebBrowserWithoutGuiInHiddenHeadlessMode);
         System.out.println("starting selenium web driver");
+
         driver = new FirefoxDriver(options);
     }
 
     // типа деструктора ресурсов. Закрываем все соединения, закрываем браузер и т.д.
     private static void closeResources() {
-        driver.close();
+        driver.close(); // maybe just call driver.quit() and not driver.close() ? Selenium Chrome extension generated only call for  driver.quit() and did not mention driver.close()
+                        // maybe removing driver.close() will fix the bug with some exception in my typical selenium log?
         driver.quit();
     }
+
 
     private static void runGoogleKeepBackup() {
 
@@ -63,10 +67,12 @@ public class WebBrowserBackup {
         wait(1); // здесь ожидания используются для того, что страница успевала прогружаться.
 
         // выбираем сервис импорта Google Keep
-        composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: Keep']"));
+        // composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: Keep']"));
+        composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: Google Keep']"));
         executor.executeScript("arguments[0].click();", composeBtn);
 
         wait(1);
+
 
         composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]")); // если хочешь завязаться именно на div, то нужно выбирать самый глубокий div, который содержит текст. Не хочу с этим разбираться, поэтому пока так
         executor.executeScript("arguments[0].click();", composeBtn);
@@ -75,35 +81,38 @@ public class WebBrowserBackup {
 
         /* выбираем область в которой можно через клики по TAB добраться до метода получения архива. Это любая область.
         Поэтому выбираем тело HTML. Важно, чтобы элемент был interactable! В противном случае получим ошибку ElementNotInteractableException */
+
         WebElement clickElement = driver.findElement(By.xpath("//body"));
-        clickElement.sendKeys(Keys.TAB); // перешли на формат файлов
-        wait(1);
-        clickElement.sendKeys(Keys.TAB); // перешли на размер архива
-        wait(1);
-        clickElement.sendKeys(Keys.TAB); // наконец перешли на метод получения
+        clickElement.sendKeys(Keys.TAB); // перешли на способ
         wait(1);
         clickElement.sendKeys(Keys.ENTER); // клацаем по элементу кнопкой и получаем раскрытый список методов получения.
-
         wait(1);
 
         // здесь выбор дропбокса
-        clickElement.sendKeys(Keys.DOWN); // идём вниз, чтобы получить опцию "Через Google Диск" (до этого была опция "По ссылке").
+        clickElement.sendKeys(Keys.DOWN); // после выполнения этой команды будет выделена опция "Добавить на Диск" (до этого была опция "По ссылке").
         wait(1);
 
-        clickElement.sendKeys(Keys.ENTER); // клацаем по пункту меню "Через Google Диск".
+        clickElement.sendKeys(Keys.DOWN); // после выполнения этой команды будет выделена опция "Добавить в Dropbox"
         wait(1);
 
-        clickElement.sendKeys(Keys.TAB); // идём вниз несколько раз, чтобы добраться до кнопки бэкапа.
-        wait(1);
-        clickElement.sendKeys(Keys.TAB);
-        wait(1);
-        clickElement.sendKeys(Keys.TAB);
+        clickElement.sendKeys(Keys.ENTER); // клацаем по пункту меню "Добавить в Dropbox"
         wait(1);
 
         // жмем наконец кнопку бэкапа
-        // После этого шага всё будет уже происходить само. Бэкап зальется на Google Drive. И если есть синхронизация папки с компом, то бэкап также автоматически синхронизируется с компом.
-        // Аккаунт google должен быть настроен в соответствующем профиле браузера. Профиль передается через параметры.
-        clickElement.sendKeys(Keys.ENTER);
+        composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Связать аккаунты и создать экспорт')]"));
+        executor.executeScript("arguments[0].click();", composeBtn);
+
+
+        wait(3);
+
+
+// это работает, но нужно будет закомментировать на текущий момент, чтобы у меня был тесткейз, где нужно вводить пароль
+        // нажимаем кнопку "Далее" после ввода пароля
+        composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]"));
+        executor.executeScript("arguments[0].click();", composeBtn);
+
+        wait(1);
+
 
         System.out.println("script finished");
         wait(600); // подождем 10 минут или 600 секунд. Т.е. в течении этого времени окно браузера firefox будет октрыто. Это время нужно для того, чтобы увидеть, на чем застрял бэкап в случае проблем.
