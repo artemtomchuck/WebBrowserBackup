@@ -11,10 +11,16 @@ import java.io.PrintStream;
 public class WebBrowserBackup {
     private static WebDriver driver;
 
-    private static final String CONST_backupTypeGoogleKeep = "googleKeep";
-    private static final String CONST_backupTypeZenMoney = "zenMoney";
+    private static final String CONST_backupTypeGoogleCalendar = "GoogleCalendar";
+    private static final String CONST_backupTypeGoogleChrome = "GoogleChrome";
+    private static final String CONST_backupTypeGoogleContacts = "GoogleContacts";
+    private static final String CONST_backupTypeGoogleKeep = "GoogleKeep";
+    private static final String CONST_backupTypeGoogleMail = "GoogleMail";
+    private static final String CONST_backupTypeGoogleMusicAndYoutube = "GoogleMusicAndYoutube";
+    private static final String CONST_backupTypeGoogleReminders = "GoogleReminders";
+    private static final String CONST_backupTypeZenMoney = "ZenMoney";
 
-    private static final String[] CONST_availableBackupTypes = {CONST_backupTypeGoogleKeep, CONST_backupTypeZenMoney};
+    private static final String[] CONST_availableBackupTypes = {CONST_backupTypeGoogleCalendar, CONST_backupTypeGoogleChrome, CONST_backupTypeGoogleContacts, CONST_backupTypeGoogleKeep, CONST_backupTypeGoogleMail, CONST_backupTypeGoogleMusicAndYoutube, CONST_backupTypeGoogleReminders, CONST_backupTypeZenMoney };
 
     // TODO: it is better to implement waiting procedure as a part Selenium driver (I have seen some examples in Internet like WebDriverWait.wait.until or something similar).
     //  Maybe this approach will lead to necessity to write custom "until" condition in each case
@@ -28,7 +34,7 @@ public class WebBrowserBackup {
     }
 
     // required initializations for driver, profiles etc
-    private static void initResources(String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
+    private static void initResources(String webBrowserProfile, boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
         System.setProperty("webdriver.gecko.driver", "dependencies\\geckodriver.exe"); // path for driver which controls the Firefox
         // System.setProperty("webdriver.chrome.driver", "dependencies\\chromedriver.exe"); // Chrome is not used here because there were some issues with HeadMode in Chrome. But leave this line as an example
 
@@ -52,7 +58,7 @@ public class WebBrowserBackup {
         driver.quit();
     }
 
-    private static void runGoogleKeepBackup() {
+    private static void runGoogleTakeoutBackup(String serviceNameOnGoogleTakeoutPage) {
 
         // go to Google Takeout page where you can trigger backup execution
         driver.get("https://takeout.google.com/settings/takeout");
@@ -65,8 +71,8 @@ public class WebBrowserBackup {
 
         wait(1); // wait in order to make sure that page is loaded properly before going to next action
 
-        // choose Google Keep - service which data we want to export
-        composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: Google Keep']"));
+        // choose Google service which data we want to export
+        composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: " + serviceNameOnGoogleTakeoutPage + "']"));
         executor.executeScript("arguments[0].click();", composeBtn);
 
         wait(1);
@@ -101,7 +107,7 @@ public class WebBrowserBackup {
         composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Связать аккаунты и создать экспорт')]"));
         executor.executeScript("arguments[0].click();", composeBtn);
 
-        wait(3);
+        wait(5);
 
         String currentUrl = driver.getCurrentUrl();
 
@@ -114,6 +120,37 @@ public class WebBrowserBackup {
             wait(1);
         }
     }
+
+    // sort Google services alphabetically
+    // --
+    private static void runGoogleCalendarBackup() {
+        runGoogleTakeoutBackup("Календарь");
+    }
+
+    private static void runGoogleChromeBackup() {
+        runGoogleTakeoutBackup("Chrome");
+    }
+
+    private static void runGoogleContactsBackup() {
+        runGoogleTakeoutBackup("Контакты");
+    }
+
+    private static void runGoogleKeepBackup() {
+        runGoogleTakeoutBackup("Google Keep");
+    }
+
+    private static void runGoogleMailBackup() {
+        runGoogleTakeoutBackup("Почта");
+    }
+
+    private static void runGoogleMusicAndYoutubeBackup() {
+        runGoogleTakeoutBackup("YouTube и YouTube Music");
+    }
+
+    private static void runGoogleRemindersBackup() {
+        runGoogleTakeoutBackup("Напоминания");
+    }
+    // --
 
     private static void runZenMoneyBackup() {
         String targetUrl = "https://zenmoney.ru/a/#export";
@@ -149,9 +186,9 @@ public class WebBrowserBackup {
         System.setErr(out);
     }
 
-    private static void runBackup(String backupType, String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
+    private static void runBackup(String backupType, String webBrowserProfile, boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
 
-        Boolean inputBackupTypeValid = false;
+        boolean inputBackupTypeValid = false;
         for (String availableBackupItem: CONST_availableBackupTypes) {
             if(availableBackupItem.equals(backupType)) {
                 inputBackupTypeValid = true;
@@ -160,7 +197,7 @@ public class WebBrowserBackup {
         }
 
         if(inputBackupTypeValid) {
-            runBackup_int(backupType, webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
+            runSeleniumBackup(backupType, webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
         }
         else {
             System.out.println("'" + backupType + "' is not available backup type. List of available backup types: " + getPrintableAvailableBackupTypes() );
@@ -169,12 +206,12 @@ public class WebBrowserBackup {
     }
 
     // TODO: it seems that it is better to avoid passing parameters in procedures. You can define these parameters as class members (probably static members). Maybe, it is even better to create some class BackupParameters
-    private static void runBackup_int(String backupType, String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
+    private static void runSeleniumBackup(String backupType, String webBrowserProfile, boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
 
         long unixTime = System.currentTimeMillis() / 1000L;
         // each call will generate separate log file with timestamp for better debugging capabilities.
         // Sometimes you may want to understand how your script worked one month ago and timestamps will be handy in such case
-        String outputFile = "log\\" + backupType+ "Backup" + webBrowserProfile +  unixTime + ".log";
+        String outputFile = "log\\" + "backup_" + backupType + "_"  + webBrowserProfile + "_"  +  unixTime + ".log";
         redirectAllOutputToFile(outputFile);
 
         initResources(webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
@@ -182,8 +219,26 @@ public class WebBrowserBackup {
         // TODO: this code is candidate for class splitting. There can be superclass which has runBackup() method. And each backup_type can have its own subclass.
         //  You can define the specific subclass in fabric method so runBackup() will use only abstract operations and all specifics will be handled in fabric methods and subclasses
         switch (backupType) {
+            case CONST_backupTypeGoogleCalendar:
+                runGoogleCalendarBackup();
+                break;
+            case CONST_backupTypeGoogleChrome:
+                runGoogleChromeBackup();
+                break;
+            case CONST_backupTypeGoogleContacts:
+                runGoogleContactsBackup();
+                break;
             case CONST_backupTypeGoogleKeep:
                 runGoogleKeepBackup();
+                break;
+            case CONST_backupTypeGoogleMail:
+                runGoogleMailBackup();
+                break;
+            case CONST_backupTypeGoogleMusicAndYoutube:
+                runGoogleMusicAndYoutubeBackup();
+                break;
+            case CONST_backupTypeGoogleReminders:
+                runGoogleRemindersBackup();
                 break;
             case CONST_backupTypeZenMoney:
                 runZenMoneyBackup();
@@ -214,11 +269,12 @@ public class WebBrowserBackup {
 
     private static String getHelp() {
          return "Utility for backup in browser. Utility uses selenium web driver to do backups from different services available for real users only. \n" +
-                "Usage: javaw -jar WebBrowserBackupProgramJarFile backupType webBrowserProfile \n" +
+                "Usage: javaw -jar WebBrowserBackupProgramJarFile backupType webBrowserProfile useWebBrowserWithoutGuiInHiddenHeadlessMode=[true, false] \n" +
                 "All parameters are required. \n" +
                 "backupType available values: " + getPrintableAvailableBackupTypes() + " \n" +
                 "webBrowserProfile: navigate to your browser and get its profile name here. Now Firefox only supported. Profile is used to set your auth information for sites where backup runs \n" +
-                "If you want help, then put only -help parameter"
+                "useWebBrowserWithoutGuiInHiddenHeadlessMode: if you don't want to see browser window during backup then set it to true. Default value of this parameter is true\n" +
+                "If you want to see this help, then put only -help parameter"
                 ;
     }
 
@@ -237,12 +293,12 @@ public class WebBrowserBackup {
             args[0].equals("-help") || // or user explicitly asks for help
             args.length != 3 // or number of parameters is unexpected. Currently we have strictly 3 parameters
            ) {
-            printHelp();
+            printHelp(); // TODO: if there is something wrong with parameters then just say that something is wrong. Do not just show help.
         }
         else { // assumption here that user already understands what he does
             String backupType = args[0];
             String webBrowserProfile = args[1];
-            Boolean doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode = ( args[2].equals( "useWebBrowserWithoutGuiInHiddenHeadlessMode=false") );
+            boolean doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode = ( args[2].equals( "useWebBrowserWithoutGuiInHiddenHeadlessMode=false") );
 
             runBackup( backupType, webBrowserProfile, !doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode );
         }
