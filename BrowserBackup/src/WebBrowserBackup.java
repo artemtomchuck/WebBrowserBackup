@@ -16,7 +16,8 @@ public class WebBrowserBackup {
 
     private static final String[] CONST_availableBackupTypes = {CONST_backupTypeGoogleKeep, CONST_backupTypeZenMoney};
 
-    // процедура ожидания
+    // TODO: it is better to implement waiting procedure as a part Selenium driver (I have seen some examples in Internet like WebDriverWait.wait.until or something similar).
+    //  Maybe this approach will lead to necessity to write custom "until" condition in each case
     private static void wait(int seconds) {
         try {
             Thread.sleep(seconds*1000);
@@ -26,14 +27,14 @@ public class WebBrowserBackup {
         System.out.println("waiting finished");
     }
 
-    // всякие необходимые инициализационные штуки для драйвера
+    // required initializations for driver, profiles etc
     private static void initResources(String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
-        System.setProperty("webdriver.gecko.driver", "dependencies\\geckodriver.exe"); // укаываем местоположение драйверов для firefox
-        // System.setProperty("webdriver.chrome.driver", "C:\googleKeepBackup\dependencies\\chromedriver.exe"); // chrome не исполльзуется, потому что с ним были ошибки. Но пусть будет на всякий случай для истории
+        System.setProperty("webdriver.gecko.driver", "dependencies\\geckodriver.exe"); // path for driver which controls the Firefox
+        // System.setProperty("webdriver.chrome.driver", "dependencies\\chromedriver.exe"); // Chrome is not used here because there were some issues with HeadMode in Chrome. But leave this line as an example
 
-        // этот профиль мы загружаем для того, чтобы вместе с ним подхватывались данные аутентификации в cookies.
-        // В этом профиле вбиты данные аутентификации Google и Dropbox.
-        // Профиль настраивается вручную через firefox.
+        // we use this profile in order to load authentication data which is stored in cookies.
+        // In this profile you should be logged into Google and Dropbox accounts.
+        // You should setup this Firefox profile manually (one-time action during initial application setup)
         ProfilesIni profile = new ProfilesIni();
         FirefoxProfile firefoxProfile = profile.getProfile( webBrowserProfile );
 
@@ -46,111 +47,98 @@ public class WebBrowserBackup {
         driver = new FirefoxDriver(options);
     }
 
-    // типа деструктора ресурсов. Закрываем все соединения, закрываем браузер и т.д.
+    // (kind of) destructor of resources. Close driver, close browser etc
     private static void closeResources() {
-        driver.close(); // maybe just call driver.quit() and not driver.close() ? Selenium Chrome extension generated only call for  driver.quit() and did not mention driver.close()
-                        // maybe removing driver.close() will fix the bug with some exception in my typical selenium log?
         driver.quit();
     }
 
-
     private static void runGoogleKeepBackup() {
 
-        // собственно переход на интересующую страница Google, где можно сделать бэкап
+        // go to Google Takeout page where you can trigger backup execution
         driver.get("https://takeout.google.com/settings/takeout");
 
-        // кликаем по кнопке "Отменить выбор", чтобы снялся выбор со всех сервисов. Мне нужен экспорт только одного сервиса.
-        WebElement composeBtn = driver.findElement(By.xpath("//*[@aria-label='Отменить выбор']")); // есть - думаю, что это более-менее универсальная завязка
+        // click the button in order to deselect all services. Selection of every service is default choice on Google Takeout page
+        // But in the scope of this backup we need to choose only single service
+        WebElement composeBtn = driver.findElement(By.xpath("//*[@aria-label='Отменить выбор']"));
         JavascriptExecutor executor = (JavascriptExecutor)driver;
         executor.executeScript("arguments[0].click();", composeBtn);
 
-        wait(1); // здесь ожидания используются для того, что страница успевала прогружаться.
+        wait(1); // wait in order to make sure that page is loaded properly before going to next action
 
-        // выбираем сервис импорта Google Keep
-        // composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: Keep']"));
+        // choose Google Keep - service which data we want to export
         composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: Google Keep']"));
         executor.executeScript("arguments[0].click();", composeBtn);
 
         wait(1);
 
-
-        composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]")); // если хочешь завязаться именно на div, то нужно выбирать самый глубокий div, который содержит текст. Не хочу с этим разбираться, поэтому пока так
+        composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]"));
         executor.executeScript("arguments[0].click();", composeBtn);
 
         wait(5);
 
-        /* выбираем область в которой можно через клики по TAB добраться до метода получения архива. Это любая область.
-        Поэтому выбираем тело HTML. Важно, чтобы элемент был interactable! В противном случае получим ошибку ElementNotInteractableException */
-
+        // choose some area in HTML which you can use as a starting point for clicking keyboard buttons.
+        // This can by any area which is interactable. If not interactable then you will get ElementNotInteractableException
+        // So we choose HTML body as a starting point.
+        // Clicking TAB button in order to choose appropriate option from menu
         WebElement clickElement = driver.findElement(By.xpath("//body"));
-        clickElement.sendKeys(Keys.TAB); // перешли на способ
+        clickElement.sendKeys(Keys.TAB); // after this we are on menu of method for retrieving data
         wait(1);
-        clickElement.sendKeys(Keys.ENTER); // клацаем по элементу кнопкой и получаем раскрытый список методов получения.
-        wait(1);
-
-        // здесь выбор дропбокса
-        clickElement.sendKeys(Keys.DOWN); // после выполнения этой команды будет выделена опция "Добавить на Диск" (до этого была опция "По ссылке").
+        clickElement.sendKeys(Keys.ENTER); // enter into this menu by pressing Enter (drop-down list with data retrieving methods will be opened)
         wait(1);
 
-        clickElement.sendKeys(Keys.DOWN); // после выполнения этой команды будет выделена опция "Добавить в Dropbox"
+        // the next step is to choose Dropbox as method for retrieving data
+
+        clickElement.sendKeys(Keys.DOWN); // after this command the option with Google Drive will be highlighted (before this command option "Download using link" was highlighted)
         wait(1);
 
-        clickElement.sendKeys(Keys.ENTER); // клацаем по пункту меню "Добавить в Dropbox"
+        clickElement.sendKeys(Keys.DOWN); // after this command the option with Dropbox will be highlighted
         wait(1);
 
-        // жмем наконец кнопку бэкапа
+        clickElement.sendKeys(Keys.ENTER); // choose Dropbox option by pressing Enter
+        wait(1);
+
+        // click backup button
         composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Связать аккаунты и создать экспорт')]"));
         executor.executeScript("arguments[0].click();", composeBtn);
 
-
         wait(3);
-
 
         String currentUrl = driver.getCurrentUrl();
 
         // if Google requests us to provide password then Firefox will substitute this password automatically and we we will just click "Next" button
+        // if Google does not request password (can happen sometimes if you execute backup few times in the same browser session) then previous step had to already start the backup process and noting to do anymore
         if(currentUrl.startsWith("https://accounts.google.com")) {
-
-            // это работает, но нужно будет закомментировать на текущий момент, чтобы у меня был тесткейз, где нужно вводить пароль
-            // нажимаем кнопку "Далее" после ввода пароля
             composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]"));
             executor.executeScript("arguments[0].click();", composeBtn);
 
             wait(1);
         }
-
-        System.out.println("script finished");
-        wait(600); // подождем 10 минут или 600 секунд. Т.е. в течении этого времени окно браузера firefox будет октрыто. Это время нужно для того, чтобы увидеть, на чем застрял бэкап в случае проблем.
-
     }
 
     private static void runZenMoneyBackup() {
         String targetUrl = "https://zenmoney.ru/a/#export";
 
-        // собственно переход на интересующую страницу ZenMoney с авторизацией от Google
-        driver.get(targetUrl); // заходим на эту страницу, чтобы не было странных вызовов API facebook, yandex и т.д., которые есть на главной странице
+        // go to target ZenMoney page where Google auth will be requested
+        driver.get(targetUrl); // we use this page and not main ZenMoney page because main ZenMoney page (https://zenmoney.ru/) has some calls to Facebook API, Yandex API etc which I don't want to call in this code
 
-        // клик по авторизации Google
-        WebElement composeBtn = driver.findElement(By.id("proceedGoogle")); // TODO: запилить метод нажимания на кнопку pressButton(element)
+        // click to use Google account as auth method
+        WebElement composeBtn = driver.findElement(By.id("proceedGoogle")); // TODO: create method pressButton(element) and extract this code into new method. Also use new method in other places where appropriate
         JavascriptExecutor executor = (JavascriptExecutor)driver;
         executor.executeScript("arguments[0].click();", composeBtn);
 
-        wait(10); // ждем, пока произойдет авторизация от гугла
+        wait(10); // let's wait some time until Google authentication is completed
         System.out.println("google auth executed");
 
-        driver.get(targetUrl); // еще раз заходим на страницу экспорта, потому что слетает ссылка в корень после авторизации от Google
+        driver.get(targetUrl); // go to the target page again because after Google authentication the current page is automatically redirected to https://zenmoney.ru/a/#transactions
 
-        wait(10); // ждем, пока форма прогрузит страницу экспорта. Там джаваскрипт быстро не прогружает, поэтому сразу элементы не появляются. -- TODO: можно использовать WebDriverWait.wait.until вместо кастомного ожидания
+        wait(10); // wait until export page will be loaded. Sometimes this page is not very quick to load. Therefore we wait a bit longer than usually
 
+        // click the export button
+        // We refer to element named "import, but please note that this is not an import - this is export. There is confusion in HTML elements naming of ZenMoney site
         driver.findElement(By.xpath("//*[@id='import']/form")).submit();
-
-        System.out.println("script finished");
-        wait(600); // подождем 10 минут или 600 секунд. Т.е. в течении этого времени окно браузера firefox будет октрыто.
-
     }
 
     private static void redirectAllOutputToFile(String outputFile) {
-
         PrintStream out = null;
         try {
             out = new PrintStream(new FileOutputStream(outputFile));
@@ -159,7 +147,6 @@ public class WebBrowserBackup {
         }
         System.setOut(out);
         System.setErr(out);
-
     }
 
     private static void runBackup(String backupType, String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
@@ -181,19 +168,19 @@ public class WebBrowserBackup {
 
     }
 
-    // todo: мне кажется, что лучше не передавать параметры в процедурах, а сделать эти параметры полями класса (по идее, статическими? ). Даже, возможно, стоит сделать какой-нибудь класс BackupParameters
+    // TODO: it seems that it is better to avoid passing parameters in procedures. You can define these parameters as class members (probably static members). Maybe, it is even better to create some class BackupParameters
     private static void runBackup_int(String backupType, String webBrowserProfile, Boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
 
         long unixTime = System.currentTimeMillis() / 1000L;
-        String outputFile = "log\\" + backupType+ "Backup" + webBrowserProfile +  unixTime + ".log"; // формируем лог файлы, ничего не перезаписывая, чтобы можно было отслелить происходящее с течением времени
+        // each call will generate separate log file with timestamp for better debugging capabilities.
+        // Sometimes you may want to understand how your script worked one month ago and timestamps will be handy in such case
+        String outputFile = "log\\" + backupType+ "Backup" + webBrowserProfile +  unixTime + ".log";
         redirectAllOutputToFile(outputFile);
 
         initResources(webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
 
-        /*
-         todo: этот код - потенциальный кандидат на разделение классов. Т.е. на каждый тип бэкапа можно иметь свой подкласс. Можно создать суперкласс, который содержит метод runBackup
-        * тогда этот код оперировал бы терминами суперкласса. Т.е. безусловно вызывал бы метод runBackup. А конкрктный подкласс, который бы присваивался переменной с типом суперкласса, определялся бы в фабричном методе.
-        */
+        // TODO: this code is candidate for class splitting. There can be superclass which has runBackup() method. And each backup_type can have its own subclass.
+        //  You can define the specific subclass in fabric method so runBackup() will use only abstract operations and all specifics will be handled in fabric methods and subclasses
         switch (backupType) {
             case CONST_backupTypeGoogleKeep:
                 runGoogleKeepBackup();
@@ -206,6 +193,12 @@ public class WebBrowserBackup {
                 break;
         }
 
+        System.out.println("script finished");
+
+        // let's wait 10 minutes (600 seconds). During this period Firefox window will be opened. This is suitable for debugging.
+        // If you see that backup is failing then with opened Firefox window you can at least find the latest page where code was running
+        wait(600);
+
         closeResources();
     }
 
@@ -214,7 +207,7 @@ public class WebBrowserBackup {
 
         String printableAvailableBackupTypes = "";
         for (String availableBackupItem: CONST_availableBackupTypes) {
-            printableAvailableBackupTypes += "'" + availableBackupItem + "'; "; // TODO: fix IDEA warnings. Сейчас не критично.
+            printableAvailableBackupTypes += "'" + availableBackupItem + "'; ";
         }
         return printableAvailableBackupTypes;
     }
@@ -235,26 +228,23 @@ public class WebBrowserBackup {
 
     public static void main( String[] args )
     {
-        /*
-         TODO: refactor this. Параметры передаются неудобно. Нужно использовать какой-нибудь стандартный фреймворк передачи параметров из разряда "key-value", чтобы можно было параметры передавать в произвольном порядке
-        * например, так: javaw -jar WebBrowserBackupProgramJarFile -backupType=zenMoney ..."
-        * иначе клиенту нужно помнить позиционно все параметры, что не очень хорошо. К тому же клиенту сейчас нужно заполнять все параметры. А если бы была структура "key-value", то некоторые параметры можно было бы сделать опциоальными.
-        */
-        if( args.length == 0 || // если на вход получили пустую строку параметров
-            args[0].equals("-help") || // или явно пользователь просит помощь
-            args.length != 3 // или количество входных параметров не равно допустимому. На текущий момент допустимо только 2 параметра. Не больше, не больше.
+        // TODO: refactor this. It is not handy parameter passing. Consider using some standard framework for OS-parameter passing (kind of "key-value")
+        //  so user will be able to pass parameter in any order and any not populated parameters will be set to default values.
+        //  Currently the order of parameters matters and all parameters should be provided which is inconvenient. Example call with desired parameters handling
+        //  javaw -jar WebBrowserBackupProgramJarFile -backupType=zenMoney -webBrowserProfile=myProfile ...
+        //
+        if( args.length == 0 || // if we have empty parameter string as input
+            args[0].equals("-help") || // or user explicitly asks for help
+            args.length != 3 // or number of parameters is unexpected. Currently we have strictly 3 parameters
            ) {
             printHelp();
         }
-        else { // предполагаем, что злесь пользователь уже понимает, что нужно делать.
-            // CONST_backupTypeZenMoney
-            // CONST_backupTypeGoogleKeep
+        else { // assumption here that user already understands what he does
             String backupType = args[0];
             String webBrowserProfile = args[1];
             Boolean doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode = ( args[2].equals( "useWebBrowserWithoutGuiInHiddenHeadlessMode=false") );
 
             runBackup( backupType, webBrowserProfile, !doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode );
         }
-
     }
 }
