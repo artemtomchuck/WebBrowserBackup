@@ -106,13 +106,18 @@ public class WebBrowserBackup {
         wait(3);
 
 
-// это работает, но нужно будет закомментировать на текущий момент, чтобы у меня был тесткейз, где нужно вводить пароль
-        // нажимаем кнопку "Далее" после ввода пароля
-        composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]"));
-        executor.executeScript("arguments[0].click();", composeBtn);
+        String currentUrl = driver.getCurrentUrl();
 
-        wait(1);
+        // if Google requests us to provide password then Firefox will substitute this password automatically and we we will just click "Next" button
+        if(currentUrl.startsWith("https://accounts.google.com")) {
 
+            // это работает, но нужно будет закомментировать на текущий момент, чтобы у меня был тесткейз, где нужно вводить пароль
+            // нажимаем кнопку "Далее" после ввода пароля
+            composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]"));
+            executor.executeScript("arguments[0].click();", composeBtn);
+
+            wait(1);
+        }
 
         System.out.println("script finished");
         wait(600); // подождем 10 минут или 600 секунд. Т.е. в течении этого времени окно браузера firefox будет октрыто. Это время нужно для того, чтобы увидеть, на чем застрял бэкап в случае проблем.
