@@ -250,9 +250,7 @@ public class WebBrowserBackup {
 
         System.out.println("script finished");
 
-        // let's wait 10 minutes (600 seconds). During this period Firefox window will be opened. This is suitable for debugging.
-        // If you see that backup is failing then with opened Firefox window you can at least find the latest page where code was running
-        wait(600);
+        wait(5);
 
         closeResources();
     }
