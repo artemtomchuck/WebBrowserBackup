@@ -8,7 +8,14 @@ So this script is intended to run the automatic backup for services that allow e
 
 # Features
 As of new the following services are available for running the backup:
-* GoogleKeep - currently Google data will be backed up into Dropbox account (does not make a lot of sense to make backup of Google service into Google drive, but you can adjust script to do this also)
+* Google - currently Google data will be backed up into Dropbox account (does not make a lot of sense to make backup of Google service into Google drive, but you can adjust script to do this also)
+    * Google Calendar
+    * Google Chrome
+    * Google Contacts
+    * Google Keep
+    * Google Mail (Gmail)
+    * Google Music (Youtube Music) and Youtube
+    * Google Reminders
 * zenmoney.ru - backup for this service is just downloaded as output csv file. You can setup to upload the downloaded file to some service of online data storage (Dropbox, Google Drive etc) - for this additional development is needed to transfer output file from Downloads folder to your destination.
 Also if it does not interfere with your other browser use-cases then you can map Browser download folder as a mirror to some online data storage service.
 
