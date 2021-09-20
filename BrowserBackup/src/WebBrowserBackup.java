@@ -173,6 +173,10 @@ public class WebBrowserBackup {
         // click the export button
         // We refer to element named "import, but please note that this is not an import - this is export. There is confusion in HTML elements naming of ZenMoney site
         driver.findElement(By.xpath("//*[@id='import']/form")).submit();
+
+        // let's wait some time in order to give browser the possibility to download requested export-file.
+        // Otherwise, if we will be very quick, there is a risk to request a download of file but close the browser before it will actually download the file (it happened already - therefore we wait)
+        wait(60);
     }
 
     private static void redirectAllOutputToFile(String outputFile) {
