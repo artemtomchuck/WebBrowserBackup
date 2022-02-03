@@ -17,5 +17,5 @@ The content of this file effectively says Mozilla to use configurations from ano
 The approach was taken from https://github.com/kee-org/browser-addon/issues/55
 
 To use autosubstitue in Google Takeout please save 2 identical passwords with different variations of the same username of https://accounts.google.com : one for pure your_google_username and the second one for username with google domain (like your google mail adress): your_google_username@gmail.com.
-If you save only one of them then in some cases Firefox may fail to substitute passwords (it happened for me already during usage of GoogleTakeout when only one password was saved. Firefox just could not substitute. But it started to substitute when I saved another variation of my username).
+If you save only one of them then in some cases Firefox may fail to substitute passwords (it happened for me already during usage of GoogleTakeout when only one variation of username was saved. Firefox just could not substitute. But it started to substitute when I saved another variation of my username).
 
