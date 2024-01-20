@@ -16,9 +16,6 @@ As of new the following services are available for running the backup:
     * Google Mail (Gmail)
     * Google Music (Youtube Music) and Youtube
     * Google Reminders
-* zenmoney.ru - backup for this service is just downloaded as output csv file. You can setup to upload the downloaded file to some service of online data storage (Dropbox, Google Drive etc) - for this additional development is needed to transfer output file from Downloads folder to your destination.
-Also if it does not interfere with your other browser use-cases then you can map Browser download folder as a mirror to some online data storage service.
-
 
 
 # Setup

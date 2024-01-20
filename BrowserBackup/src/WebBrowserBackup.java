@@ -18,9 +18,8 @@ public class WebBrowserBackup {
     private static final String CONST_backupTypeGoogleMail = "GoogleMail";
     private static final String CONST_backupTypeGoogleMusicAndYoutube = "GoogleMusicAndYoutube";
     private static final String CONST_backupTypeGoogleReminders = "GoogleReminders";
-    private static final String CONST_backupTypeZenMoney = "ZenMoney";
 
-    private static final String[] CONST_availableBackupTypes = {CONST_backupTypeGoogleCalendar, CONST_backupTypeGoogleChrome, CONST_backupTypeGoogleContacts, CONST_backupTypeGoogleKeep, CONST_backupTypeGoogleMail, CONST_backupTypeGoogleMusicAndYoutube, CONST_backupTypeGoogleReminders, CONST_backupTypeZenMoney };
+    private static final String[] CONST_availableBackupTypes = {CONST_backupTypeGoogleCalendar, CONST_backupTypeGoogleChrome, CONST_backupTypeGoogleContacts, CONST_backupTypeGoogleKeep, CONST_backupTypeGoogleMail, CONST_backupTypeGoogleMusicAndYoutube, CONST_backupTypeGoogleReminders };
 
     // TODO: it is better to implement waiting procedure as a part Selenium driver (I have seen some examples in Internet like WebDriverWait.wait.until or something similar).
     //  Maybe this approach will lead to necessity to write custom "until" condition in each case
@@ -152,33 +151,6 @@ public class WebBrowserBackup {
     }
     // --
 
-    private static void runZenMoneyBackup() {
-        String targetUrl = "https://zenmoney.ru/a/#export";
-
-        // go to target ZenMoney page where Google auth will be requested
-        driver.get(targetUrl); // we use this page and not main ZenMoney page because main ZenMoney page (https://zenmoney.ru/) has some calls to Facebook API, Yandex API etc which I don't want to call in this code
-
-        // click to use Google account as auth method
-        WebElement composeBtn = driver.findElement(By.id("proceedGoogle")); // TODO: create method pressButton(element) and extract this code into new method. Also use new method in other places where appropriate
-        JavascriptExecutor executor = (JavascriptExecutor)driver;
-        executor.executeScript("arguments[0].click();", composeBtn);
-
-        wait(10); // let's wait some time until Google authentication is completed
-        System.out.println("google auth executed");
-
-        driver.get(targetUrl); // go to the target page again because after Google authentication the current page is automatically redirected to https://zenmoney.ru/a/#transactions
-
-        wait(10); // wait until export page will be loaded. Sometimes this page is not very quick to load. Therefore we wait a bit longer than usually
-
-        // click the export button
-        // We refer to element named "import, but please note that this is not an import - this is export. There is confusion in HTML elements naming of ZenMoney site
-        driver.findElement(By.xpath("//*[@id='import']/form")).submit();
-
-        // let's wait some time in order to give browser the possibility to download requested export-file.
-        // Otherwise, if we will be very quick, there is a risk to request a download of file but close the browser before it will actually download the file (it happened already - therefore we wait)
-        wait(60);
-    }
-
     private static void redirectAllOutputToFile(String outputFile) {
         PrintStream out = null;
         try {
@@ -244,9 +216,6 @@ public class WebBrowserBackup {
             case CONST_backupTypeGoogleReminders:
                 runGoogleRemindersBackup();
                 break;
-            case CONST_backupTypeZenMoney:
-                runZenMoneyBackup();
-                break;
             default:
                 System.out.println("Invalid or not yet implemented backup Type. Please extend this procedure if you need one more backup type");
                 break;
@@ -289,7 +258,7 @@ public class WebBrowserBackup {
         // TODO: refactor this. It is not handy parameter passing. Consider using some standard framework for OS-parameter passing (kind of "key-value")
         //  so user will be able to pass parameter in any order and any not populated parameters will be set to default values.
         //  Currently the order of parameters matters and all parameters should be provided which is inconvenient. Example call with desired parameters handling
-        //  javaw -jar WebBrowserBackupProgramJarFile -backupType=zenMoney -webBrowserProfile=myProfile ...
+        //  javaw -jar WebBrowserBackupProgramJarFile -backupType=GoogleCalendar -webBrowserProfile=myProfile ...
         //
         if( args.length == 0 || // if we have empty parameter string as input
             args[0].equals("-help") || // or user explicitly asks for help
