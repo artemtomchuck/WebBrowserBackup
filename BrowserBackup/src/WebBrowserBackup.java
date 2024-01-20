@@ -89,6 +89,10 @@ public class WebBrowserBackup {
     }
 
     private static void handleGoogleAuthenticationRequest() {
+
+        // lets maybe wait some time. Maybe redirect to auth request will be delayed
+        wait(5);
+
         String currentUrl = driver.getCurrentUrl();
 
         // if Google requests us to provide password then Firefox will substitute this password automatically and we we will just click "Next" button
