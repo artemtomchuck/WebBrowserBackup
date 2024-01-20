@@ -7,6 +7,9 @@ import org.openqa.selenium.firefox.internal.ProfilesIni;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 
 public class WebBrowserBackup {
     private static WebDriver driver;
@@ -18,15 +21,17 @@ public class WebBrowserBackup {
     private static final String CONST_backupTypeGoogleMail = "GoogleMail";
     private static final String CONST_backupTypeGoogleMusicAndYoutube = "GoogleMusicAndYoutube";
     private static final String CONST_backupTypeGoogleReminders = "GoogleReminders";
-    private static final String CONST_backupTypeZenMoney = "ZenMoney";
+    private static final String CONST_backupTypeGoogleTasks = "GoogleTasks";
 
-    private static final String[] CONST_availableBackupTypes = {CONST_backupTypeGoogleCalendar, CONST_backupTypeGoogleChrome, CONST_backupTypeGoogleContacts, CONST_backupTypeGoogleKeep, CONST_backupTypeGoogleMail, CONST_backupTypeGoogleMusicAndYoutube, CONST_backupTypeGoogleReminders, CONST_backupTypeZenMoney };
+
+    private static final String[] CONST_availableBackupTypes = {CONST_backupTypeGoogleCalendar, CONST_backupTypeGoogleChrome, CONST_backupTypeGoogleContacts, CONST_backupTypeGoogleKeep, CONST_backupTypeGoogleMail, CONST_backupTypeGoogleMusicAndYoutube, CONST_backupTypeGoogleReminders, CONST_backupTypeGoogleTasks };
 
     // TODO: it is better to implement waiting procedure as a part Selenium driver (I have seen some examples in Internet like WebDriverWait.wait.until or something similar).
     //  Maybe this approach will lead to necessity to write custom "until" condition in each case
+    // TODO: improve logging whenever this wait is called. It would be nice to know at which step this wait is executed
     private static void wait(int seconds) {
         try {
-            Thread.sleep(seconds*1000);
+            Thread.sleep(seconds* 1000L);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -58,10 +63,60 @@ public class WebBrowserBackup {
         driver.quit();
     }
 
-    private static void runGoogleTakeoutBackup(String serviceNameOnGoogleTakeoutPage) {
+    private static String getServiceNameOnGoogleTakeoutPage(String backupType) {
+        // sort Google services alphabetically
+        switch (backupType) {
+            case CONST_backupTypeGoogleCalendar:
+                return "Календарь";
+            case CONST_backupTypeGoogleChrome:
+                return "Chrome";
+            case CONST_backupTypeGoogleContacts:
+                return "Контакты";
+            case CONST_backupTypeGoogleKeep:
+                return "Google Keep";
+            case CONST_backupTypeGoogleMail:
+                return "Почта";
+            case CONST_backupTypeGoogleMusicAndYoutube:
+                return "YouTube и YouTube Music";
+            case CONST_backupTypeGoogleReminders:
+                return "Напоминания";
+            case CONST_backupTypeGoogleTasks:
+                return "Задачи";
+            default:
+                System.out.println("Invalid or not yet implemented backup Type. Please extend this procedure if you need one more backup type");
+                return null;
+        }
+    }
+
+    private static void handleGoogleAuthenticationRequest() {
+        String currentUrl = driver.getCurrentUrl();
+
+        // if Google requests us to provide password then Firefox will substitute this password automatically and we we will just click "Next" button
+        // if Google does not request password (can happen sometimes if you execute backup few times in the same browser session) then previous step had to already start the backup process and noting to do anymore
+        if(currentUrl.startsWith("https://accounts.google.com")) {
+            WebElement composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]"));
+            JavascriptExecutor executor = (JavascriptExecutor)driver;
+            executor.executeScript("arguments[0].click();", composeBtn);
+
+            wait(10);
+        }
+    }
+
+    // this function can execute the list of provided Google backups in single GoogleTakeout archive
+    // But you don't necessarily need to execute multiple type of backups - just provide array with one element in such case
+    private static void runGoogleTakeoutBackup(String[] backupTypeList) {
+
+        final String googleTakeoutUrl = "https://takeout.google.com/settings/takeout";
 
         // go to Google Takeout page where you can trigger backup execution
-        driver.get("https://takeout.google.com/settings/takeout");
+        driver.get(googleTakeoutUrl);
+
+        // I am not sure 100%, but Google may request authentication here
+        handleGoogleAuthenticationRequest();
+
+        // if previous open of Google Takeout page requested authentication then open Google Takeout page again.
+        // This time Google probably shouldn't request authentication anymore
+        driver.get(googleTakeoutUrl);
 
         // click the button in order to deselect all services. Selection of every service is default choice on Google Takeout page
         // But in the scope of this backup we need to choose only single service
@@ -71,11 +126,14 @@ public class WebBrowserBackup {
 
         wait(1); // wait in order to make sure that page is loaded properly before going to next action
 
-        // choose Google service which data we want to export
-        composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: " + serviceNameOnGoogleTakeoutPage + "']"));
-        executor.executeScript("arguments[0].click();", composeBtn);
+        for (String backupType : backupTypeList) {
+            String serviceNameOnGoogleTakeoutPage = getServiceNameOnGoogleTakeoutPage(backupType);
 
-        wait(1);
+            // choose Google service which data we want to export
+            composeBtn = driver.findElement(By.xpath("//*[@aria-label='Выбрать: " + serviceNameOnGoogleTakeoutPage + "']"));
+            executor.executeScript("arguments[0].click();", composeBtn);
+            wait(2);
+        }
 
         composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]"));
         executor.executeScript("arguments[0].click();", composeBtn);
@@ -109,74 +167,8 @@ public class WebBrowserBackup {
 
         wait(5);
 
-        String currentUrl = driver.getCurrentUrl();
-
-        // if Google requests us to provide password then Firefox will substitute this password automatically and we we will just click "Next" button
-        // if Google does not request password (can happen sometimes if you execute backup few times in the same browser session) then previous step had to already start the backup process and noting to do anymore
-        if(currentUrl.startsWith("https://accounts.google.com")) {
-            composeBtn = driver.findElement(By.xpath("//span[contains(string(), 'Далее')]"));
-            executor.executeScript("arguments[0].click();", composeBtn);
-
-            wait(1);
-        }
-    }
-
-    // sort Google services alphabetically
-    // --
-    private static void runGoogleCalendarBackup() {
-        runGoogleTakeoutBackup("Календарь");
-    }
-
-    private static void runGoogleChromeBackup() {
-        runGoogleTakeoutBackup("Chrome");
-    }
-
-    private static void runGoogleContactsBackup() {
-        runGoogleTakeoutBackup("Контакты");
-    }
-
-    private static void runGoogleKeepBackup() {
-        runGoogleTakeoutBackup("Google Keep");
-    }
-
-    private static void runGoogleMailBackup() {
-        runGoogleTakeoutBackup("Почта");
-    }
-
-    private static void runGoogleMusicAndYoutubeBackup() {
-        runGoogleTakeoutBackup("YouTube и YouTube Music");
-    }
-
-    private static void runGoogleRemindersBackup() {
-        runGoogleTakeoutBackup("Напоминания");
-    }
-    // --
-
-    private static void runZenMoneyBackup() {
-        String targetUrl = "https://zenmoney.ru/a/#export";
-
-        // go to target ZenMoney page where Google auth will be requested
-        driver.get(targetUrl); // we use this page and not main ZenMoney page because main ZenMoney page (https://zenmoney.ru/) has some calls to Facebook API, Yandex API etc which I don't want to call in this code
-
-        // click to use Google account as auth method
-        WebElement composeBtn = driver.findElement(By.id("proceedGoogle")); // TODO: create method pressButton(element) and extract this code into new method. Also use new method in other places where appropriate
-        JavascriptExecutor executor = (JavascriptExecutor)driver;
-        executor.executeScript("arguments[0].click();", composeBtn);
-
-        wait(10); // let's wait some time until Google authentication is completed
-        System.out.println("google auth executed");
-
-        driver.get(targetUrl); // go to the target page again because after Google authentication the current page is automatically redirected to https://zenmoney.ru/a/#transactions
-
-        wait(10); // wait until export page will be loaded. Sometimes this page is not very quick to load. Therefore we wait a bit longer than usually
-
-        // click the export button
-        // We refer to element named "import, but please note that this is not an import - this is export. There is confusion in HTML elements naming of ZenMoney site
-        driver.findElement(By.xpath("//*[@id='import']/form")).submit();
-
-        // let's wait some time in order to give browser the possibility to download requested export-file.
-        // Otherwise, if we will be very quick, there is a risk to request a download of file but close the browser before it will actually download the file (it happened already - therefore we wait)
-        wait(60);
+        // typically Google request authentication in this place
+        handleGoogleAuthenticationRequest();
     }
 
     private static void redirectAllOutputToFile(String outputFile) {
@@ -190,90 +182,70 @@ public class WebBrowserBackup {
         System.setErr(out);
     }
 
-    private static void runBackup(String backupType, String webBrowserProfile, boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
+    private static void runBackup(String backupTypeCsvList, String webBrowserProfile, boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
+        String[] requestedBackupTypeList = backupTypeCsvList.split(",");
 
-        boolean inputBackupTypeValid = false;
-        for (String availableBackupItem: CONST_availableBackupTypes) {
-            if(availableBackupItem.equals(backupType)) {
-                inputBackupTypeValid = true;
-                break;
+        boolean isRequestedBackupTypeValid = false;
+
+        for (String requestedBackupType: requestedBackupTypeList) {
+            isRequestedBackupTypeValid = false;
+
+            for (String availableBackupType: CONST_availableBackupTypes) {
+                if(availableBackupType.equals(requestedBackupType)) {
+                    isRequestedBackupTypeValid = true;
+                    break;
+                }
+            }
+
+            if(!isRequestedBackupTypeValid) {
+                System.out.println("'" + requestedBackupType + "' is not available backup type. List of available backup types: " + getPrintableAvailableBackupTypes() );
+                return;
             }
         }
 
-        if(inputBackupTypeValid) {
-            runSeleniumBackup(backupType, webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
-        }
-        else {
-            System.out.println("'" + backupType + "' is not available backup type. List of available backup types: " + getPrintableAvailableBackupTypes() );
-        }
-
+        runSeleniumBackup(requestedBackupTypeList, webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
     }
 
     // TODO: it seems that it is better to avoid passing parameters in procedures. You can define these parameters as class members (probably static members). Maybe, it is even better to create some class BackupParameters
-    private static void runSeleniumBackup(String backupType, String webBrowserProfile, boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
+    private static void runSeleniumBackup(String[] backupTypeList, String webBrowserProfile, boolean useWebBrowserWithoutGuiInHiddenHeadlessMode) {
+        LocalDateTime now = LocalDateTime.now();
+        String formattedDateTime = now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
 
-        long unixTime = System.currentTimeMillis() / 1000L;
         // each call will generate separate log file with timestamp for better debugging capabilities.
         // Sometimes you may want to understand how your script worked one month ago and timestamps will be handy in such case
-        String outputFile = "log\\" + "backup_" + backupType + "_"  + webBrowserProfile + "_"  +  unixTime + ".log";
+        String outputFile = "log\\" + formattedDateTime + "_backup.log";
+
         redirectAllOutputToFile(outputFile);
+
+        System.out.println("Log parameters: ");
+        System.out.println("webBrowserProfile = " + webBrowserProfile);
+        System.out.println("backupTypeList = " + Arrays.toString(backupTypeList));
 
         initResources(webBrowserProfile, useWebBrowserWithoutGuiInHiddenHeadlessMode);
 
         // TODO: this code is candidate for class splitting. There can be superclass which has runBackup() method. And each backup_type can have its own subclass.
         //  You can define the specific subclass in fabric method so runBackup() will use only abstract operations and all specifics will be handled in fabric methods and subclasses
-        switch (backupType) {
-            case CONST_backupTypeGoogleCalendar:
-                runGoogleCalendarBackup();
-                break;
-            case CONST_backupTypeGoogleChrome:
-                runGoogleChromeBackup();
-                break;
-            case CONST_backupTypeGoogleContacts:
-                runGoogleContactsBackup();
-                break;
-            case CONST_backupTypeGoogleKeep:
-                runGoogleKeepBackup();
-                break;
-            case CONST_backupTypeGoogleMail:
-                runGoogleMailBackup();
-                break;
-            case CONST_backupTypeGoogleMusicAndYoutube:
-                runGoogleMusicAndYoutubeBackup();
-                break;
-            case CONST_backupTypeGoogleReminders:
-                runGoogleRemindersBackup();
-                break;
-            case CONST_backupTypeZenMoney:
-                runZenMoneyBackup();
-                break;
-            default:
-                System.out.println("Invalid or not yet implemented backup Type. Please extend this procedure if you need one more backup type");
-                break;
-        }
 
-        System.out.println("script finished");
+        // currently only Google backup is supported here. If there will be other backup type then you should split the calls:
+        // So that runGoogleTakeoutBackup is called only with Google type backups input. All other backup types should be handled in separate call
+        runGoogleTakeoutBackup( backupTypeList );
 
-        wait(5);
+        System.out.println("backup finished");
+
+        wait(15);
 
         closeResources();
     }
 
-
     private static String getPrintableAvailableBackupTypes() {
-
-        String printableAvailableBackupTypes = "";
-        for (String availableBackupItem: CONST_availableBackupTypes) {
-            printableAvailableBackupTypes += "'" + availableBackupItem + "'; ";
-        }
-        return printableAvailableBackupTypes;
+        return Arrays.toString(CONST_availableBackupTypes);
     }
 
     private static String getHelp() {
          return "Utility for backup in browser. Utility uses selenium web driver to do backups from different services available for real users only. \n" +
-                "Usage: javaw -jar WebBrowserBackupProgramJarFile backupType webBrowserProfile useWebBrowserWithoutGuiInHiddenHeadlessMode=[true, false] \n" +
+                "Usage: javaw -jar WebBrowserBackupProgramJarFile backupTypeList webBrowserProfile useWebBrowserWithoutGuiInHiddenHeadlessMode=[true, false] \n" +
                 "All parameters are required. \n" +
-                "backupType available values: " + getPrintableAvailableBackupTypes() + " \n" +
+                "backupTypeList available values can be provided as comma ',' separated: " + getPrintableAvailableBackupTypes() + " \n" +
                 "webBrowserProfile: navigate to your browser and get its profile name here. Now Firefox only supported. Profile is used to set your auth information for sites where backup runs \n" +
                 "useWebBrowserWithoutGuiInHiddenHeadlessMode: if you don't want to see browser window during backup then set it to true. Default value of this parameter is true\n" +
                 "If you want to see this help, then put only -help parameter"
@@ -289,7 +261,7 @@ public class WebBrowserBackup {
         // TODO: refactor this. It is not handy parameter passing. Consider using some standard framework for OS-parameter passing (kind of "key-value")
         //  so user will be able to pass parameter in any order and any not populated parameters will be set to default values.
         //  Currently the order of parameters matters and all parameters should be provided which is inconvenient. Example call with desired parameters handling
-        //  javaw -jar WebBrowserBackupProgramJarFile -backupType=zenMoney -webBrowserProfile=myProfile ...
+        //  javaw -jar WebBrowserBackupProgramJarFile -backupType=GoogleCalendar -webBrowserProfile=myProfile ...
         //
         if( args.length == 0 || // if we have empty parameter string as input
             args[0].equals("-help") || // or user explicitly asks for help
@@ -298,11 +270,11 @@ public class WebBrowserBackup {
             printHelp(); // TODO: if there is something wrong with parameters then just say that something is wrong. Do not just show help.
         }
         else { // assumption here that user already understands what he does
-            String backupType = args[0];
+            String backupTypeCsvList = args[0];
             String webBrowserProfile = args[1];
             boolean doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode = ( args[2].equals( "useWebBrowserWithoutGuiInHiddenHeadlessMode=false") );
 
-            runBackup( backupType, webBrowserProfile, !doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode );
+            runBackup( backupTypeCsvList, webBrowserProfile, !doNotUseWebBrowserWithoutGuiInHiddenHeadlessMode );
         }
     }
 }

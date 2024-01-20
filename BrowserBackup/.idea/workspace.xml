@@ -5,11 +5,13 @@
       <artifact name="WebBrowserBackup:jar" />
     </artifacts-to-build>
   </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="fff4324a-80e4-4011-bf4c-b805cb9563b5" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/artifacts/WebBrowserBackup_jar.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/artifacts/WebBrowserBackup_jar.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WebBrowserBackup.iml" beforeDir="false" afterPath="$PROJECT_DIR$/WebBrowserBackup.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/WebBrowserBackup.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/WebBrowserBackup.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,25 +31,30 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/src/WebBrowserBackup.java" root0="FORCE_HIGHLIGHTING" />
   </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 5
+}]]></component>
   <component name="ProjectId" id="1gC6NM4cNqwy9zmoZXuXfwxAgGY" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="project.structure.last.edited" value="Artifacts" />
-    <property name="project.structure.proportion" value="0.15" />
-    <property name="project.structure.side.proportion" value="0.14482759" />
-    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
-  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.WebBrowserBackup.executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "development",
+    "kotlin-language-version-configured": "true"
+  }
+}]]></component>
   <component name="RunManager">
     <configuration name="WebBrowserBackup" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="WebBrowserBackup" />
       <module name="WebBrowserBackup" />
-      <option name="PROGRAM_PARAMETERS" value="GoogleKeep AutomatedBackupWebBrowserProfile useWebBrowserWithoutGuiInHiddenHeadlessMode=false" />
+      <option name="PROGRAM_PARAMETERS" value="&quot;GoogleTasks,GoogleCalendar,GoogleChrome,GoogleContacts&quot; AutomatedBackupWebBrowserProfile useWebBrowserWithoutGuiInHiddenHeadlessMode=false" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -57,6 +64,13 @@
         <item itemvalue="Application.WebBrowserBackup" />
       </list>
     </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="jdk-1.8.0_402-corretto-1.8.0_402-4caba194b151-ae57be32" />
+      </set>
+    </attachedChunks>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
