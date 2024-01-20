@@ -8,7 +8,7 @@ So this script is intended to run the automatic backup for services that allow e
 
 # Features
 As of new the following services are available for running the backup:
-* Google - currently Google data will be backed up into Dropbox account (does not make a lot of sense to make backup of Google service into Google drive, but you can adjust script to do this also)
+* Google - currently Google data will be backed up into Dropbox account (does not make a lot of sense to make backup of Google service into Google drive, but you can adjust code to do this also)
     * Google Calendar
     * Google Chrome
     * Google Contacts
@@ -16,6 +16,7 @@ As of new the following services are available for running the backup:
     * Google Mail (Gmail)
     * Google Music (Youtube Music) and Youtube
     * Google Reminders
+    * Google Tasks
 
 
 # Setup
